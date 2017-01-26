@@ -1,10 +1,5 @@
 <?php
 
-$time = microtime();
-$time = explode(' ', $time);
-$time = $time[1] + $time[0];
-$start = $time;
-
 define('SMF', 1);
 require_once(dirname(__FILE__) . '/Settings.php');
 require_once($sourcedir . '/Load.php');
@@ -47,6 +42,103 @@ function chatMain() {
 
 	if(array_key_exists($_REQUEST['act'],$action)) {
 		header("Content-Type: text/xml; charset=utf-8");
+		call_user_func($action[$_REQUEST['act']]);
+	} else {
+		chatHome();
+	}
+}
+
+function chatHome() {
+
+	echo '<html>
+	<head>
+		<title>Membox</title>
+		<script language="JavaScript" type="text/javascript">
+			var timer;
+			function chatStart() {
+				document.getElementById(\'message\').focus();
+				chatGet();
+			}
+			function chatGet() {
+				var xmlhttp = new XMLHttpRequest();
+				xmlhttp.open("GET", "?act=get", true);
+				xmlhttp.send();
+				xmlhttp.onreadystatechange = function() {
+					if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+						document.getElementById("chat").innerHTML = xmlhttp.responseText;
+						document.getElementById("chat").scrollTop = document.getElementById("chat").scrollHeight;
+					}
+				};
+				timer = setTimeout(\'chatGet();\',2000);
+			}
+			function chatSend() {
+				if(document.getElementById(\'message\').value == \'\') {
+					return;
+				}
+				var xmlhttp = new XMLHttpRequest();
+				xmlhttp.open("POST", "?act=send", true);
+				xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+				var param = \'msg=\' + document.getElementById(\'message\').value;
+				xmlhttp.send(param);
+				document.getElementById(\'message\').value = \'\';
+				clearInterval(timer);
+				chatGet();
+			}
+			function chatSubmit() {
+				chatSend();
+				return false;
+			}
+		</script>
+	</head>
+	<body onLoad="javascript:chatStart();">
+		<div id="chat" style="height:300px;width:500px;overflow:auto;"></div>
+		<form onSubmit="return chatSubmit();">
+			<input type="button" value="Refresh Chat" onClick="javascript:chatGet();" />
+			<input type="text" id="message" name="message" style="width:500px;" />
+			<input type="button" value="Send" onClick="javascript:chatSend();" />
+		</form>
+	</body>
+</html>';
+
+}
+
+function chatGet() {
+	if (($data = cache_get_data('membox', 600)) != null) {
+		$msgs = array_reverse($data['msg']);
+		foreach ($msgs as &$msg)
+			echo $msg.'<br />';
+	} else
+		echo 'No Chat Data.';
+
+	echo 'Lag '.(microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']).' seconds.';
+}
+
+function chatSend() {
+
+	global $user_settings;
+	
+	if (($data = cache_get_data('membox', 600)) == null) {
+		$data = array(
+			'time_start' => time(),
+			'msg' => array(),
+		);
+	} else {
+		$data['msg'] = array_slice($data['msg'], 0, 20);
+	}
+
+	if (isset($_REQUEST['msg'])) {
+		$post = str_replace(array("\r\n", "\r", "\n"), "", $_REQUEST['msg']);
+		array_unshift($data['msg'], '<b>'.$user_settings['member_name'].'</b> - '.htmlspecialchars(strip_tags($post)));
+	}
+	cache_put_data('membox', $data, 600);
+}
+
+function safe_unserialize($data) {
+	if (preg_match('/(^|;|{|})O:([0-9]|\+|\-)+/', $data) === 0)
+		return @unserialize($data);
+}
+?>
+
 		call_user_func($action[$_REQUEST['act']]);
 	} else {
 		chatHome();
