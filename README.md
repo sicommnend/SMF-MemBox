@@ -5,4 +5,4 @@ The system uses a validation system that, in which while fast for a chat system,
 
 Users will log into their SMF account on the forum and follow the link to the chat in the forum root folder.
 
-This chat is meant to be used with a forum system with a memory based cache system. File base is not optimtimal.
+This chat is meant to be used with a forum system with a memory based cache system. File base is not optimal.
